@@ -1,5 +1,6 @@
 -- lua/wingman/utils.lua
 local Path = require("plenary.path")
+local Popup = require("nui.popup")
 
 local ignored_folders = {
 	-- JavaScript/Node.js
@@ -91,7 +92,23 @@ local ignored_folders = {
 	".svelte-kit", -- SvelteKit build output
 }
 
+local input_win = nil
+local input_buf = nil
+local input_cbk = nil
 local M = {}
+
+local ns_id = vim.api.nvim_create_namespace("WingmanHighlightNamespace")
+
+-- Define a highlight group with a background color
+vim.cmd("highlight WingmanHighlightNamespace guibg=#0067ce")
+
+-- Function to highlight a specific portion of the buffer
+function M.highlight_buffer(bufnr, start_line, end_line)
+	-- Add highlight to the buffer
+	for line = start_line, end_line do
+		vim.api.nvim_buf_add_highlight(bufnr, ns_id, "WingmanHighlightNamespace", line, 0, -1)
+	end
+end
 
 function M.print_summary(tbl)
 	if type(tbl) ~= "table" then
@@ -239,60 +256,93 @@ function M.extract_ranges(source_table, range)
 	return extracted
 end
 
-M.input_win = nil
-M.input_buf = nil
-M.input_cbk = nil
-
 function M.on_submit()
-	local lines = vim.api.nvim_buf_get_lines(M.input_buf, 1, -1, false)
+	if input_buf == nil or input_win == nil then
+		error("No buffer / No window")
+	end
+
+	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 	local user_input = table.concat(lines, "\n")
-	M.input_cbk(user_input) -- Call the callback with the user's input
-	vim.api.nvim_win_close(M.input_win, true) -- Close the window
-	M.input_win = nil
-	M.input_buf = nil
-	M.input_cbk = nil
+
+	-- Write user input to a temporary file
+	local cache_dir = vim.fn.stdpath("cache") .. "/wingman_user_input"
+	vim.fn.writefile({ user_input }, cache_dir)
+
+	input_cbk(user_input) -- Call the callback with the user's input
+
+	vim.api.nvim_win_close(input_win, true) -- Close the window
+	vim.api.nvim_buf_delete(input_buf, { force = true })
+
+	input_win = nil
+	input_buf = nil
+	input_cbk = nil
 end
 
-function M.multi_line_input(prompt, callback)
-	M.input_buf = vim.api.nvim_create_buf(false, true)
-	M.input_cbk = callback
+function M.multi_line_input(callback)
+	local popup = Popup({
+		position = "50%",
+		size = {
+			width = 80,
+			height = 40,
+		},
+		enter = true,
+		focusable = true,
+		zindex = 50,
+		relative = "editor",
+		border = {
+			padding = {
+				top = 2,
+				bottom = 2,
+				left = 3,
+				right = 3,
+			},
+			style = "rounded",
+			text = {
+				top = "< [Wingman]  Ask a question >",
+				top_align = "center",
+				bottom = "< Press <Enter> in normal mode when finished / <Esc> to cancel >",
+				bottom_align = "center",
+			},
+		},
+		buf_options = {
+			modifiable = true,
+			readonly = false,
+		},
+		win_options = {
+			winblend = 10,
+			winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
+		},
+	})
 
-	-- Set buffer options
-	vim.api.nvim_buf_set_option(M.input_buf, "buftype", "nofile")
-	vim.api.nvim_buf_set_option(M.input_buf, "bufhidden", "wipe")
-	vim.api.nvim_buf_set_option(M.input_buf, "swapfile", false)
+	popup:show()
 
-	-- Set the prompt
-	vim.api.nvim_buf_set_lines(M.input_buf, 0, -1, false, { prompt, "", "Press <Enter> to submit in normal mode." })
+	vim.cmd("startinsert")
 
-	-- Define the floating window dimensions and position
-	local width = 80
-	local height = 10
-	local win_opts = {
-		relative = "win",
-		width = width,
-		height = height,
-		col = (vim.o.columns - width) / 2,
-		row = (vim.o.lines - height) / 2,
-		style = "minimal",
-		border = "rounded",
-	}
+	popup:map("n", "<esc>", function()
+		popup:hide()
+		popup:unmount()
+	end, { noremap = true })
 
-	-- Create the floating window
-	M.input_win = vim.api.nvim_open_win(M.input_buf, true, win_opts)
+	popup:map("n", "<CR>", function()
+		local lines = vim.api.nvim_buf_get_lines(popup.bufnr, 0, -1, false)
+		local user_input = table.concat(lines, "\n")
 
-	-- Set some window options
-	vim.api.nvim_win_set_option(M.input_win, "wrap", true)
-	vim.api.nvim_win_set_option(M.input_win, "cursorline", true)
+		-- Write user input to a temporary file
+		local cache_dir = vim.fn.stdpath("cache") .. "/wingman_user_input"
+		vim.fn.writefile({ user_input }, cache_dir)
 
-	-- Map <Enter> to submit the input
-	vim.api.nvim_buf_set_keymap(
-		M.input_buf,
-		"n",
-		"<CR>",
-		':lua require("wingman.utils").on_submit()<CR>',
-		{ noremap = true, silent = true }
-	)
+		callback(user_input)
+
+		popup:hide()
+		popup:unmount()
+	end, { noremap = true })
+end
+
+-- Function to load user input from the temporary file
+function M.load_user_input()
+	local cache_dir = vim.fn.stdpath("cache") .. "/wingman_user_input"
+	local lines = vim.fn.readfile(cache_dir)
+	return table.concat(lines, "\n")
 end
 
 return M
