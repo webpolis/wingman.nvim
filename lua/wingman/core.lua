@@ -186,9 +186,6 @@ function M.print_symbols()
 			end
 		end
 
-		-- Set the lines in the buffer
-		vim.api.nvim_buf_set_lines(buf, 0, -1, false, final_output)
-
 		-- Define the floating window dimensions and position
 		local width = 120
 		local height = 65
@@ -202,12 +199,27 @@ function M.print_symbols()
 			border = "rounded",
 		}
 
-		-- Create the floating window
-		local win = vim.api.nvim_open_win(buf, true, win_opts)
+		utils.multi_line_input("Enter your question for the LLM:", function(user_question)
+			local q = utils.split_string_by_newlines(user_question)
 
-		-- Optionally, set some window options
-		vim.api.nvim_win_set_option(win, "wrap", false)
-		vim.api.nvim_win_set_option(win, "cursorline", true)
+			for _, qline in ipairs(q) do
+				table.insert(final_output, qline)
+			end
+
+			-- Set the lines in the buffer
+			vim.api.nvim_buf_set_lines(buf, 0, -1, false, final_output)
+
+			-- Create the floating window
+			local win = vim.api.nvim_open_win(buf, true, win_opts)
+
+			-- Optionally, set some window options
+			vim.api.nvim_win_set_option(win, "wrap", false)
+			vim.api.nvim_win_set_option(win, "cursorline", true)
+
+			-- Move the cursor to the end of the buffer
+			local line_count = vim.api.nvim_buf_line_count(buf)
+			vim.api.nvim_win_set_cursor(win, { line_count, 0 })
+		end)
 	end)
 end
 

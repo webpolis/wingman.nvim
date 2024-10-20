@@ -239,4 +239,55 @@ function M.extract_ranges(source_table, range)
 	return extracted
 end
 
+M.input_win = nil
+M.input_buf = vim.api.nvim_create_buf(false, true)
+M.input_cbk = nil
+-- Set buffer options
+vim.api.nvim_buf_set_option(M.input_buf, "buftype", "nofile")
+vim.api.nvim_buf_set_option(M.input_buf, "bufhidden", "wipe")
+vim.api.nvim_buf_set_option(M.input_buf, "swapfile", false)
+
+function M.on_submit()
+	local lines = vim.api.nvim_buf_get_lines(M.input_buf, 1, -1, false)
+	local user_input = table.concat(lines, "\n")
+	M.input_cbk(user_input) -- Call the callback with the user's input
+	vim.api.nvim_win_close(M.input_win, true) -- Close the window
+	M.input_win = nil
+end
+
+function M.multi_line_input(prompt, callback)
+	M.input_cbk = callback
+	-- Set the prompt
+	vim.api.nvim_buf_set_lines(M.input_buf, 0, -1, false, { prompt, "", "Press <Enter> to submit in normal mode." })
+
+	-- Define the floating window dimensions and position
+	local width = 80
+	local height = 10
+	local win_opts = {
+		relative = "win",
+		width = width,
+		height = height,
+		col = (vim.o.columns - width) / 2,
+		row = (vim.o.lines - height) / 2,
+		style = "minimal",
+		border = "rounded",
+	}
+
+	-- Create the floating window
+	M.input_win = vim.api.nvim_open_win(M.input_buf, true, win_opts)
+
+	-- Set some window options
+	vim.api.nvim_win_set_option(M.input_win, "wrap", true)
+	vim.api.nvim_win_set_option(M.input_win, "cursorline", true)
+
+	-- Map <Enter> to submit the input
+	vim.api.nvim_buf_set_keymap(
+		M.input_buf,
+		"n",
+		"<CR>",
+		':lua require("wingman.utils").on_submit()<CR>',
+		{ noremap = true, silent = true }
+	)
+end
+
 return M
