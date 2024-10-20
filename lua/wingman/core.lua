@@ -1,8 +1,10 @@
+local Popup = require("nui.popup")
 local ts_utils = require("nvim-treesitter.ts_utils")
 local api = vim.api
 local pending_requests = 0
 local symbol_set = {} -- To track unique symbols
 local utils = require("wingman.utils")
+local llm = require("wingman.llm")
 
 local M = {}
 
@@ -131,6 +133,10 @@ function M.print_symbols()
 	get_symbols(function(symbols)
 		-- Create a new buffer
 		local buf = vim.api.nvim_create_buf(false, true)
+		-- Set buffer options
+		vim.api.nvim_buf_set_option(buf, "buftype", "nofile")
+		vim.api.nvim_buf_set_option(buf, "swapfile", false)
+
 		local final_output = {}
 		local file_contents = {}
 		local ranges = {}
@@ -186,20 +192,8 @@ function M.print_symbols()
 			end
 		end
 
-		-- Define the floating window dimensions and position
-		local width = 120
-		local height = 65
-		local win_opts = {
-			relative = "win",
-			width = width,
-			height = height,
-			col = (vim.o.columns - width) / 2,
-			row = (vim.o.lines - height) / 2,
-			style = "minimal",
-			border = "rounded",
-		}
-
-		utils.multi_line_input("Enter your question for the LLM:", function(user_question)
+		utils.multi_line_input(function(user_input)
+			local user_question = user_input or utils.load_user_input()
 			local q = utils.split_string_by_newlines(user_question)
 
 			for _, qline in ipairs(q) do
@@ -207,18 +201,56 @@ function M.print_symbols()
 			end
 
 			-- Set the lines in the buffer
-			vim.api.nvim_buf_set_lines(buf, 0, -1, false, final_output)
+			-- vim.api.nvim_buf_set_lines(buf, 0, -1, false, final_output)
 
-			-- Create the floating window
-			local win = vim.api.nvim_open_win(buf, true, win_opts)
+			local popup = Popup({
+				bufnr = buf,
+				position = "50%",
+				size = {
+					width = 120,
+					height = 60,
+				},
+				enter = true,
+				focusable = true,
+				zindex = 50,
+				relative = "editor",
+				border = {
+					padding = {
+						top = 2,
+						bottom = 2,
+						left = 3,
+						right = 3,
+					},
+					style = "rounded",
+					text = {
+						top = "< [Wingman]  Model response >",
+						top_align = "center",
+						bottom = "< Press <Esc> to close >",
+						bottom_align = "center",
+					},
+				},
+				buf_options = {
+					modifiable = true,
+					readonly = false,
+				},
+				win_options = {
+					winblend = 10,
+					winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
+				},
+			})
 
-			-- Optionally, set some window options
-			vim.api.nvim_win_set_option(win, "wrap", false)
-			vim.api.nvim_win_set_option(win, "cursorline", true)
+			popup:map("n", "<esc>", function()
+				popup:hide()
+				popup:unmount()
+			end, { noremap = true })
+
+			popup:map("n", "<CR>", function() end, { noremap = true })
+
+			llm.send_to_openai(final_output, popup)
 
 			-- Move the cursor to the end of the buffer
 			local line_count = vim.api.nvim_buf_line_count(buf)
-			vim.api.nvim_win_set_cursor(win, { line_count, 0 })
+			vim.api.nvim_win_set_cursor(popup.winid, { line_count, 0 })
 		end)
 	end)
 end
