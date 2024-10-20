@@ -240,12 +240,8 @@ function M.extract_ranges(source_table, range)
 end
 
 M.input_win = nil
-M.input_buf = vim.api.nvim_create_buf(false, true)
+M.input_buf = nil
 M.input_cbk = nil
--- Set buffer options
-vim.api.nvim_buf_set_option(M.input_buf, "buftype", "nofile")
-vim.api.nvim_buf_set_option(M.input_buf, "bufhidden", "wipe")
-vim.api.nvim_buf_set_option(M.input_buf, "swapfile", false)
 
 function M.on_submit()
 	local lines = vim.api.nvim_buf_get_lines(M.input_buf, 1, -1, false)
@@ -253,10 +249,19 @@ function M.on_submit()
 	M.input_cbk(user_input) -- Call the callback with the user's input
 	vim.api.nvim_win_close(M.input_win, true) -- Close the window
 	M.input_win = nil
+	M.input_buf = nil
+	M.input_cbk = nil
 end
 
 function M.multi_line_input(prompt, callback)
+	M.input_buf = vim.api.nvim_create_buf(false, true)
 	M.input_cbk = callback
+
+	-- Set buffer options
+	vim.api.nvim_buf_set_option(M.input_buf, "buftype", "nofile")
+	vim.api.nvim_buf_set_option(M.input_buf, "bufhidden", "wipe")
+	vim.api.nvim_buf_set_option(M.input_buf, "swapfile", false)
+
 	-- Set the prompt
 	vim.api.nvim_buf_set_lines(M.input_buf, 0, -1, false, { prompt, "", "Press <Enter> to submit in normal mode." })
 
