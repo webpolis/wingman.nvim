@@ -5,7 +5,7 @@ local pending_requests = 0
 local symbol_set = {} -- To track unique symbols
 local utils = require("wingman.utils")
 local llm = require("wingman.llm")
-local SQLiteWrapper = require("wingman.db")
+local db_instance = require("wingman.db")
 
 local M = {}
 
@@ -150,6 +150,7 @@ function M.check_and_update_symbol(db, symbol)
 			if existing_record.code ~= symbol.code then
 				-- Update the record with the new code
 				db:update_by_id("symbols", existing_record.id, { code = symbol.code })
+			end
 		end
 	else
 		db:add("symbols", symbol)
@@ -167,7 +168,7 @@ function M.parse()
 		type = { "text", required = true }, -- Type of the symbol
 	}
 	local symbols_db_path = vim.fn.stdpath("cache") .. "/symbols.db"
-	local symbols_db = SQLiteWrapper:new(symbols_db_path)
+	local symbols_db = db_instance.get_instance(symbols_db_path)
 
 	symbols_db:create_table("symbols", symbols_schema)
 

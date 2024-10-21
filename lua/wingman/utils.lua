@@ -3,6 +3,7 @@ local Path = require("plenary.path")
 local Popup = require("nui.popup")
 local Menu = require("nui.menu")
 local event = require("nui.utils.autocmd").event
+local db_instance = require("wingman.db")
 
 local ignored_folders = {
 	-- JavaScript/Node.js
@@ -336,21 +337,48 @@ end
 
 -- Function to show suggestions
 function M.show_suggestions(bufnr)
-	local suggestions = { "apple", "banana", "cherry", "date", "fig", "grape" }
-	local input = vim.fn.getline("."):match("%S*$") -- Get the last word typed
+	local symbols_db_path = vim.fn.stdpath("cache") .. "/symbols.db"
+	local symbols_db = db_instance.get_instance(symbols_db_path)
+	local input = M.trim(vim.fn.getline("."):match("%S*$"))
 
-	-- Filter suggestions based on input
-	local filtered = {}
-	for _, suggestion in ipairs(suggestions) do
-		if suggestion:lower():match("^" .. input:lower()) then
-			table.insert(filtered, suggestion)
+	if not input or #input < 3 then
+		return
+	end
+
+	-- Fetch suggestions from the symbols table
+	local results = symbols_db:get("symbols", { contains = { name = input .. "*" }, limit = 20 }) -- Fetch results with LIKE
+
+	if not results then
+		return
+	end
+
+	-- Create a table to hold unique suggestions
+	local suggestions = {}
+	for _, record in ipairs(results) do
+		local name = record.name:lower() -- Normalize to lower case for uniqueness
+		if not suggestions[name] then
+			suggestions[name] = record -- Store the record for unique suggestions
 		end
+	end
+
+	-- Convert the suggestions table to a list
+	local filtered = {}
+	for _, record in pairs(suggestions) do
+		table.insert(filtered, record.name) -- Add the unique code to the filtered list
 	end
 
 	-- If there are suggestions, show them in a popup
 	if #filtered > 0 then
-		vim.fn.complete(vim.fn.col("."), filtered) -- Use built-in completion
+		local col = vim.fn.col(".") - #input -- Calculate the starting column for replacement
+		vim.fn.complete(col, filtered) -- Use built-in completion
 	end
+end
+
+function M.trim(s)
+	if s == nil then
+		return s
+	end
+	return s:match("^%s*(.-)%s*$")
 end
 
 return M
