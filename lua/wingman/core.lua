@@ -5,6 +5,7 @@ local pending_requests = 0
 local symbol_set = {} -- To track unique symbols
 local utils = require("wingman.utils")
 local llm = require("wingman.llm")
+local SQLiteWrapper = require("wingman.db")
 
 local M = {}
 
@@ -129,7 +130,47 @@ local function get_symbols(callback)
 	end
 end
 
-function M.print_symbols()
+function M.check_and_update_symbol(db, symbol)
+	-- Define the condition to check for the existing record
+	local condition = {
+		path = symbol.path,
+		name = symbol.name,
+		line = symbol.line,
+	}
+
+	-- Check if the record exists
+	if db:exists("symbols", condition) then
+		-- Get the existing record
+		local existing_records = db:get("symbols", { where = condition })
+
+		if #existing_records > 0 then
+			local existing_record = existing_records[1] -- Assuming unique records
+
+			-- Check if the code differs
+			if existing_record.code ~= symbol.code then
+				-- Update the record with the new code
+				db:update_by_id("symbols", existing_record.id, { code = symbol.code })
+		end
+	else
+		db:add("symbols", symbol)
+	end
+end
+
+function M.parse()
+	local symbols_schema = {
+		id = true, -- Unique identifier for each symbol
+		name = { "text", required = true }, -- Name of the symbol
+		line = { "integer", required = true }, -- Starting line number
+		end_line = { "integer", required = true }, -- Ending line number
+		path = { "text", required = true }, -- File path
+		code = { "text", required = true }, -- Code block
+		type = { "text", required = true }, -- Type of the symbol
+	}
+	local symbols_db_path = vim.fn.stdpath("cache") .. "/symbols.db"
+	local symbols_db = SQLiteWrapper:new(symbols_db_path)
+
+	symbols_db:create_table("symbols", symbols_schema)
+
 	get_symbols(function(symbols)
 		-- Create a new buffer
 		local buf = vim.api.nvim_create_buf(false, true)
@@ -166,6 +207,8 @@ function M.print_symbols()
 			local code_block = utils.split_string_by_newlines(symbol.code)
 
 			table.insert(ranges[symbol.path], { symbol.line, symbol.line + #code_block })
+
+			M.check_and_update_symbol(symbols_db, symbol)
 
 			::continue::
 		end
