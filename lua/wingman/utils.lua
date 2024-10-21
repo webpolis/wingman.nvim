@@ -1,6 +1,8 @@
 -- lua/wingman/utils.lua
 local Path = require("plenary.path")
 local Popup = require("nui.popup")
+local Menu = require("nui.menu")
+local event = require("nui.utils.autocmd").event
 
 local ignored_folders = {
 	-- JavaScript/Node.js
@@ -92,9 +94,6 @@ local ignored_folders = {
 	".svelte-kit", -- SvelteKit build output
 }
 
-local input_win = nil
-local input_buf = nil
-local input_cbk = nil
 local M = {}
 
 local ns_id = vim.api.nvim_create_namespace("WingmanHighlightNamespace")
@@ -187,7 +186,7 @@ function M.get_code_block_from_file(file_path, start_line, end_line)
 
 	-- Set the buffer to be hidden
 	vim.api.nvim_buf_set_option(temp_bufnr, "buflisted", false) -- Prevent the buffer from being listed
-	vim.api.nvim_buf_set_option(temp_bufnr, "modifiable", false) -- Make the buffer read-only
+	-- vim.api.nvim_buf_set_option(temp_bufnr, "modifiable", false) -- Make the buffer read-only
 	vim.api.nvim_buf_set_option(temp_bufnr, "bufhidden", "wipe") -- Automatically delete when hidden
 
 	-- Get the parser for the newly created buffer
@@ -256,28 +255,6 @@ function M.extract_ranges(source_table, range)
 	return extracted
 end
 
-function M.on_submit()
-	if input_buf == nil or input_win == nil then
-		error("No buffer / No window")
-	end
-
-	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-	local user_input = table.concat(lines, "\n")
-
-	-- Write user input to a temporary file
-	local cache_dir = vim.fn.stdpath("cache") .. "/wingman_user_input"
-	vim.fn.writefile({ user_input }, cache_dir)
-
-	input_cbk(user_input) -- Call the callback with the user's input
-
-	vim.api.nvim_win_close(input_win, true) -- Close the window
-	vim.api.nvim_buf_delete(input_buf, { force = true })
-
-	input_win = nil
-	input_buf = nil
-	input_cbk = nil
-end
-
 function M.multi_line_input(callback)
 	local popup = Popup({
 		position = "50%",
@@ -311,10 +288,13 @@ function M.multi_line_input(callback)
 		win_options = {
 			winblend = 10,
 			winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
+			cursorline = true, -- Highlight the line with the cursor
 		},
 	})
 
 	popup:show()
+
+	vim.api.nvim_buf_set_option(popup.bufnr, "modifiable", true)
 
 	vim.cmd("startinsert")
 
@@ -336,6 +316,15 @@ function M.multi_line_input(callback)
 		popup:hide()
 		popup:unmount()
 	end, { noremap = true })
+
+	local menu
+
+	vim.api.nvim_create_autocmd({ "TextChangedI" }, {
+		buffer = popup.bufnr, -- Target the specific buffer
+		callback = function()
+			M.show_suggestions(popup.bufnr)
+		end,
+	})
 end
 
 -- Function to load user input from the temporary file
@@ -343,6 +332,25 @@ function M.load_user_input()
 	local cache_dir = vim.fn.stdpath("cache") .. "/wingman_user_input"
 	local lines = vim.fn.readfile(cache_dir)
 	return table.concat(lines, "\n")
+end
+
+-- Function to show suggestions
+function M.show_suggestions(bufnr)
+	local suggestions = { "apple", "banana", "cherry", "date", "fig", "grape" }
+	local input = vim.fn.getline("."):match("%S*$") -- Get the last word typed
+
+	-- Filter suggestions based on input
+	local filtered = {}
+	for _, suggestion in ipairs(suggestions) do
+		if suggestion:lower():match("^" .. input:lower()) then
+			table.insert(filtered, suggestion)
+		end
+	end
+
+	-- If there are suggestions, show them in a popup
+	if #filtered > 0 then
+		vim.fn.complete(vim.fn.col("."), filtered) -- Use built-in completion
+	end
 end
 
 return M

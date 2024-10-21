@@ -22,7 +22,7 @@ end
 M.config = M.setup
 
 M.start = function()
-	return core.print_symbols()
+	return core.parse()
 end
 
 return M
