@@ -1,6 +1,7 @@
 local openai = require("openai")
 local client = openai.new(
 	os.getenv("OPENAI_API_KEY")
+		or "sk-HM40uWYjTGBrmFSVRjoJ73yYUdy1Rq9mMxkKhX9oKXT3BlbkFJDcVGdH6dhsB7BqlrQXXyg3Xf1IFB316f7IkqMB0qEA"
 )
 local utils = require("wingman.utils")
 
@@ -41,29 +42,31 @@ function M.send_to_openai(final_output, popup)
 		end
 
 		if chunk.content and chunk.content ~= "" then
+			print(chunk.content)
 			-- Accumulate content
 			accumulated_content = accumulated_content .. chunk.content
 
 			-- Check for newlines to determine if we have a complete paragraph
-			if string.find(chunk.content, "\n") then
-				-- Split the accumulated content into paragraphs
-				local paragraphs = vim.split(accumulated_content, "\n")
-
-				-- Append each paragraph to the buffer
-				for _, paragraph in ipairs(paragraphs) do
-					if paragraph ~= "" then
-						vim.api.nvim_buf_set_lines(popup.bufnr, -1, -1, false, { paragraph })
-						extra_line_count = extra_line_count + 1
-					end
+			while true do
+				local newline_pos = string.find(accumulated_content, "\n")
+				if not newline_pos then
+					break -- No more newlines found
 				end
 
-				-- Reset the accumulated content for the next paragraph
-				accumulated_content = ""
+				-- Extract the paragraph up to the newline
+				local paragraph = string.sub(accumulated_content, 1, newline_pos - 1)
+				if paragraph ~= "" then
+					vim.api.nvim_buf_set_lines(popup.bufnr, -1, -1, false, { paragraph })
+					extra_line_count = extra_line_count + 1
+				end
 
-				-- Move the cursor to the end of the buffer
-				local current_line_count = vim.api.nvim_buf_line_count(popup.bufnr)
-				vim.api.nvim_win_set_cursor(popup.winid, { current_line_count, 0 })
+				-- Remove the processed paragraph from accumulated_content
+				accumulated_content = string.sub(accumulated_content, newline_pos + 1)
 			end
+
+			-- Move the cursor to the end of the buffer
+			local current_line_count = vim.api.nvim_buf_line_count(popup.bufnr)
+			vim.api.nvim_win_set_cursor(popup.winid, { current_line_count, 0 })
 		end
 	end)
 end
