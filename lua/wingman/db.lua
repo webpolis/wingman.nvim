@@ -2,15 +2,17 @@
 local sqlite = require("sqlite.db")
 local tbl = require("sqlite.tbl")
 
+local instance = nil
 local SQLiteWrapper = {}
 SQLiteWrapper.__index = SQLiteWrapper
 
 --- Create a new SQLiteWrapper instance
 ---@param uri string: The database URI
 function SQLiteWrapper:new(uri)
-	local instance = sqlite({ uri = uri, opts = {} })
-
-	setmetatable(instance, self)
+	if not instance then
+		instance = sqlite({ uri = uri, opts = {} })
+		setmetatable(instance, self)
+	end
 	return instance
 end
 
@@ -45,18 +47,30 @@ function SQLiteWrapper:add(table_name, row)
 	return self.db[table_name]:insert(row)
 end
 
---- Get all records from a specified table
+--- Check if a record exists in a specified table
 ---@param table_name string: The name of the table
----@param q sqlite_query_select: A query to limit the number of entries returned
----@return table: A list of records
-function SQLiteWrapper:get(table_name, q)
+---@param condition table: A table containing the condition to check
+---@return boolean: True if the record exists, false otherwise
+function SQLiteWrapper:get(table_name, condition)
 	if not self.db[table_name] then
 		error("Table " .. table_name .. " does not exist.")
 	end
-	return self.db[table_name]:map(function(record)
-		return record
-	end, q)
+	local result = self.db[table_name]:get(condition)
+	return result
 end
+
+--- --- Get all records from a specified table
+--- ---@param table_name string: The name of the table
+--- ---@param q sqlite_query_select: A query to limit the number of entries returned
+--- ---@return table: A list of records
+--- function SQLiteWrapper:get(table_name, q)
+--- 	if not self.db[table_name] then
+--- 		error("Table " .. table_name .. " does not exist.")
+--- 	end
+--- 	return self.db[table_name]:map(function(record)
+--- 		return record
+--- 	end, q)
+--- end
 
 --- Update a record by ID in a specified table
 ---@param table_name string: The name of the table
@@ -89,4 +103,8 @@ function SQLiteWrapper:cleanup()
 	end, 40000)
 end
 
-return SQLiteWrapper
+return {
+	get_instance = function(uri)
+		return SQLiteWrapper:new(uri)
+	end,
+}
