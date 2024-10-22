@@ -7,16 +7,15 @@ local utils = require("wingman.utils")
 
 local M = {}
 
-local SYSTEM_PROMPT =
+M.SYSTEM_PROMPT =
 	[[You are a Senior Engineer with extensive experience in both backend and frontend development across various programming languages and frameworks, including React, Angular, Vue.js, Svelte, Node.js, Python, Java, C++, and Go. You excel in designing RESTful APIs and GraphQL services, and have expertise in blockchain and web3 development.
 You stay current with trends for building efficient, scalable user interfaces using modern CSS and UI frameworks like TailwindCSS, ShadCN, Bootstrap, and Material-UI. Your skills include writing clean, maintainable TypeScript and JavaScript code.
 You possess strong knowledge of database technologies (SQL: PostgreSQL, MySQL; NoSQL: MongoDB, Redis) and cloud services (AWS, Azure, Google Cloud Platform). Your problem-solving skills enable you to provide concise, actionable answers with source code for fixing issues or generating new features.
 You are familiar with DevOps practices, including CI/CD, Docker, Kubernetes, and Terraform. Avoid redundant comments in code. Respond to inquiries with the necessary context, specifying affected files and only writing required changes.
-Following is a list of file paths and relevant code snippets:
 ]]
 
 function M.send_to_openai(final_output, popup)
-	local initial_prompt = utils.split_string_by_newlines(SYSTEM_PROMPT)
+	local initial_prompt = utils.split_string_by_newlines(M.SYSTEM_PROMPT)
 	local messages = {}
 	local extra_line_count = 0
 	local popup_is_open = false
@@ -40,14 +39,16 @@ function M.send_to_openai(final_output, popup)
 		end
 
 		if chunk.content and chunk.content ~= "" then
-			print(chunk.content)
 			-- Accumulate content
 			accumulated_content = accumulated_content .. chunk.content
 
 			-- Check for newlines to determine if we have a complete paragraph
 			while true do
 				local newline_pos = string.find(accumulated_content, "\n")
-				if not newline_pos then
+				if newline_pos ~= nil then
+					vim.api.nvim_buf_set_lines(popup.bufnr, -1, -1, false, { "" })
+					vim.cmd("redraw")
+				else
 					break -- No more newlines found
 				end
 
@@ -55,6 +56,7 @@ function M.send_to_openai(final_output, popup)
 				local paragraph = string.sub(accumulated_content, 1, newline_pos - 1)
 				if paragraph ~= "" then
 					vim.api.nvim_buf_set_lines(popup.bufnr, -1, -1, false, { paragraph })
+					vim.cmd("redraw")
 					extra_line_count = extra_line_count + 1
 				end
 

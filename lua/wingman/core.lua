@@ -7,7 +7,7 @@ local utils = require("wingman.utils")
 local llm = require("wingman.llm")
 local db_instance = require("wingman.db")
 
-local symbols_db_path = vim.fn.stdpath("cache") .. "/symbols.db"
+local symbols_db_path = vim.fn.stdpath("cache") .. "/wingman_symbols.db"
 local symbols_db = db_instance.get_instance(symbols_db_path)
 
 local M = {}
@@ -162,11 +162,64 @@ function M.check_and_update_symbol(db, symbol)
 	end
 end
 
-function M.symbols_to_markdown(symbol_ids)
-	local symbols = symbols_db:get("symbols", { id = symbol_ids })
+function M.symbols_to_markdown(symbol_ids, symbols)
+	local _symbols = symbols ~= nil and symbols or symbols_db:where("symbols", { id = symbol_ids })
+	local ranges = {}
+	local paths = {}
+	local file_contents = {}
+	local output = {}
+
+	table.sort(_symbols, function(a, b)
+		return a["path"] < b["path"]
+	end)
+
+	table.sort(_symbols, function(a, b)
+		return a["line"] < b["line"]
+	end)
+
+	for _, symbol in ipairs(_symbols) do
+		if string.sub(utils.get_relative_path(symbol.path), 1, 1) == "/" then
+			goto continue
+		end
+
+		if not ranges[symbol.path] then
+			ranges[symbol.path] = {}
+			table.insert(paths, symbol.path)
+			file_contents[symbol.path] = utils.lines_to_table(symbol.path)
+		end
+
+		local code_block = utils.split_string_by_newlines(symbol.code)
+
+		table.insert(ranges[symbol.path], { symbol.line, symbol.line + #code_block })
+
+		::continue::
+	end
+	for _, path in ipairs(paths) do
+		local header = string.format("%s", utils.get_relative_path(path))
+
+		table.insert(output, "")
+		table.insert(output, header)
+		table.insert(output, string.rep("=", #header))
+		table.insert(output, "")
+
+		for _, range in ipairs(utils.merge_ranges(ranges[path])) do
+			local extracted_lines = utils.extract_ranges(file_contents[path], range)
+
+			table.insert(output, "```")
+
+			for _, line in ipairs(extracted_lines) do
+				table.insert(output, line)
+			end
+
+			table.insert(output, "```")
+			table.insert(output, "")
+		end
+	end
+
+	return output
 end
 
-function M.parse()
+function M.parse(collect)
 	local symbols_schema = {
 		id = true, -- Unique identifier for each symbol
 		name = { "text", required = true }, -- Name of the symbol
@@ -187,35 +240,14 @@ function M.parse()
 		vim.api.nvim_buf_set_option(buf, "buftype", "nofile")
 		vim.api.nvim_buf_set_option(buf, "swapfile", false)
 
-		local final_output = {}
-		local file_contents = {}
-		local ranges = {}
-		local paths = {}
+		local final_output = { "Following is a list of file paths and code snippets as context:", "" }
 		symbol_set = {}
 		pending_requests = 0
-
-		table.sort(symbols, function(a, b)
-			return a["path"] < b["path"]
-		end)
-
-		table.sort(symbols, function(a, b)
-			return a["line"] < b["line"]
-		end)
 
 		for _, symbol in ipairs(symbols) do
 			if string.sub(utils.get_relative_path(symbol.path), 1, 1) == "/" then
 				goto continue
 			end
-
-			if not ranges[symbol.path] then
-				ranges[symbol.path] = {}
-				table.insert(paths, symbol.path)
-				file_contents[symbol.path] = utils.lines_to_table(symbol.path)
-			end
-
-			local code_block = utils.split_string_by_newlines(symbol.code)
-
-			table.insert(ranges[symbol.path], { symbol.line, symbol.line + #code_block })
 
 			local symbol_id = M.check_and_update_symbol(symbols_db, symbol)
 
@@ -224,38 +256,43 @@ function M.parse()
 			::continue::
 		end
 
-		for _, path in ipairs(paths) do
-			local header = string.format("%s", utils.get_relative_path(path))
-
-			table.insert(final_output, "")
-			table.insert(final_output, header)
-			table.insert(final_output, string.rep("=", #header))
-			table.insert(final_output, "")
-
-			for _, range in ipairs(utils.merge_ranges(ranges[path])) do
-				local extracted_lines = utils.extract_ranges(file_contents[path], range)
-
-				table.insert(final_output, "```")
-
-				for _, line in ipairs(extracted_lines) do
-					table.insert(final_output, line)
-				end
-
-				table.insert(final_output, "```")
-				table.insert(final_output, "")
-			end
+		if collect then
+			return
 		end
+
+		final_output = utils.table_concat(final_output, M.symbols_to_markdown(collected_symbols_ids))
 
 		utils.multi_line_input(function(user_input)
 			local user_question = user_input or utils.load_user_input()
 			local q = utils.split_string_by_newlines(user_question)
 
+			-- Extract the additional references
+			local md_links = utils.extract_md_links(user_question)
+
+			if #md_links > 0 then
+				for _, link in ipairs(md_links) do
+					local ref_symbols_by_name = symbols_db:get("symbols", { contains = { name = link["text"] } })
+					local ref_symbols_by_path = symbols_db:get("symbols", { contains = { path = "*" .. link["url"] } })
+					local ref_symbols = utils.table_concat(ref_symbols_by_name, ref_symbols_by_path)
+					local additional_context = M.symbols_to_markdown(nil, ref_symbols)
+					final_output = utils.table_concat(final_output, additional_context)
+				end
+			end
+
 			for _, qline in ipairs(q) do
 				table.insert(final_output, qline)
 			end
 
-			-- Set the lines in the buffer
-			-- vim.api.nvim_buf_set_lines(buf, 0, -1, false, final_output)
+			local tmp_path = vim.fn.stdpath("cache") .. "/wingman_final.out"
+			local tmp_file = io.open(tmp_path, "w")
+
+			if tmp_file ~= nil then
+				tmp_file:write(llm.SYSTEM_PROMPT)
+				for _, line in ipairs(final_output) do
+					tmp_file:write(line .. "\n")
+				end
+				tmp_file:close()
+			end
 
 			local popup = Popup({
 				bufnr = buf,

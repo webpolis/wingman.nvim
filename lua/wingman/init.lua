@@ -25,4 +25,8 @@ M.start = function()
 	return core.parse()
 end
 
+M.collect = function()
+	return core.parse(true)
+end
+
 return M
