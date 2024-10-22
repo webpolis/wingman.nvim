@@ -59,6 +59,18 @@ function SQLiteWrapper:get(table_name, condition)
 	return result
 end
 
+--- Check if a record exists in a specified table
+---@param table_name string: The name of the table
+---@param condition table: A table containing the condition to check
+---@return boolean: True if the record exists, false otherwise
+function SQLiteWrapper:where(table_name, condition)
+	if not self.db[table_name] then
+		error("Table " .. table_name .. " does not exist.")
+	end
+	local result = self.db[table_name]:where(condition)
+	return result
+end
+
 --- --- Get all records from a specified table
 --- ---@param table_name string: The name of the table
 --- ---@param q sqlite_query_select: A query to limit the number of entries returned
