@@ -1,8 +1,6 @@
 -- lua/wingman/utils.lua
 local Path = require("plenary.path")
 local Popup = require("nui.popup")
-local Menu = require("nui.menu")
-local event = require("nui.utils.autocmd").event
 local db_instance = require("wingman.db")
 
 local ignored_folders = {
@@ -338,7 +336,7 @@ end
 
 -- Function to show suggestions
 function M.show_suggestions(bufnr)
-	local symbols_db_path = vim.fn.stdpath("cache") .. "/symbols.db"
+	local symbols_db_path = vim.fn.stdpath("cache") .. "/wingman_symbols.db"
 	local symbols_db = db_instance.get_instance(symbols_db_path)
 	local input = M.trim(vim.fn.getline("."):match("%S*$"))
 
@@ -387,6 +385,14 @@ function M.table_concat(table1, table2)
 		result[#result + 1] = table2[i]
 	end
 	return result
+end
+
+function M.extract_md_links(input)
+	local links = {}
+	for text, url in input:gmatch("%[(.-)%]%((.-)%)") do
+		table.insert(links, { text = text, url = url })
+	end
+	return links
 end
 
 return M

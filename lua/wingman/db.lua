@@ -67,7 +67,7 @@ function SQLiteWrapper:where(table_name, condition)
 	if not self.db[table_name] then
 		error("Table " .. table_name .. " does not exist.")
 	end
-	local result = self.db[table_name]:where(condition)
+	local result = self.db[table_name]:get({ where = condition })
 	return result
 end
 
