@@ -296,6 +296,7 @@ function M.multi_line_input(callback)
 	popup:show()
 
 	vim.api.nvim_buf_set_option(popup.bufnr, "modifiable", true)
+	vim.api.nvim_win_set_option(popup.winid, "wrap", true)
 
 	vim.cmd("startinsert")
 
@@ -346,25 +347,21 @@ function M.show_suggestions(bufnr)
 	end
 
 	-- Fetch suggestions from the symbols table
-	local results = symbols_db:get("symbols", { contains = { name = input .. "*" }, limit = 20 }) -- Fetch results with LIKE
-
-	if not results then
-		return
-	end
-
-	-- Create a table to hold unique suggestions
+	local symbols = symbols_db:get("symbols", { contains = { name = input .. "*" }, limit = 20 })
+	local paths = symbols_db:get("symbols", { contains = { path = "*" .. input .. "*" }, limit = 20 })
 	local suggestions = {}
-	for _, record in ipairs(results) do
-		local name = record.name:lower() -- Normalize to lower case for uniqueness
-		if not suggestions[name] then
-			suggestions[name] = record -- Store the record for unique suggestions
-		end
+
+	for _, record in ipairs(symbols) do
+		table.insert(suggestions, string.format("[%s](%s)", record.name, M.get_relative_path(record.path)))
+	end
+	for _, record in ipairs(paths) do
+		table.insert(suggestions, M.get_relative_path(record.path))
 	end
 
 	-- Convert the suggestions table to a list
 	local filtered = {}
 	for _, record in pairs(suggestions) do
-		table.insert(filtered, record.name) -- Add the unique code to the filtered list
+		table.insert(filtered, record) -- Add the unique code to the filtered list
 	end
 
 	-- If there are suggestions, show them in a popup
@@ -379,6 +376,17 @@ function M.trim(s)
 		return s
 	end
 	return s:match("^%s*(.-)%s*$")
+end
+
+function M.table_concat(table1, table2)
+	local result = {}
+	for i = 1, #table1 do
+		result[i] = table1[i]
+	end
+	for i = 1, #table2 do
+		result[#result + 1] = table2[i]
+	end
+	return result
 end
 
 return M

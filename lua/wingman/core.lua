@@ -7,6 +7,9 @@ local utils = require("wingman.utils")
 local llm = require("wingman.llm")
 local db_instance = require("wingman.db")
 
+local symbols_db_path = vim.fn.stdpath("cache") .. "/symbols.db"
+local symbols_db = db_instance.get_instance(symbols_db_path)
+
 local M = {}
 
 local function request_document(req_type, client, name, line_number, start_col, symbols, callback)
@@ -151,10 +154,16 @@ function M.check_and_update_symbol(db, symbol)
 				-- Update the record with the new code
 				db:update_by_id("symbols", existing_record.id, { code = symbol.code })
 			end
+
+			return existing_record.id
 		end
 	else
-		db:add("symbols", symbol)
+		return db:add("symbols", symbol)
 	end
+end
+
+function M.symbols_to_markdown(symbol_ids)
+	local symbols = symbols_db:get("symbols", { id = symbol_ids })
 end
 
 function M.parse()
@@ -167,8 +176,7 @@ function M.parse()
 		code = { "text", required = true }, -- Code block
 		type = { "text", required = true }, -- Type of the symbol
 	}
-	local symbols_db_path = vim.fn.stdpath("cache") .. "/symbols.db"
-	local symbols_db = db_instance.get_instance(symbols_db_path)
+	local collected_symbols_ids = {}
 
 	symbols_db:create_table("symbols", symbols_schema)
 
@@ -209,7 +217,9 @@ function M.parse()
 
 			table.insert(ranges[symbol.path], { symbol.line, symbol.line + #code_block })
 
-			M.check_and_update_symbol(symbols_db, symbol)
+			local symbol_id = M.check_and_update_symbol(symbols_db, symbol)
+
+			table.insert(collected_symbols_ids, symbol_id)
 
 			::continue::
 		end
