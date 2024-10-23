@@ -395,4 +395,12 @@ function M.extract_md_links(input)
 	return links
 end
 
+function M.escape(content)
+	return string.format("__ESCAPED__'%s'", content)
+end
+
+function M.unescape(content)
+	return content:gsub("^__ESCAPED__'(.*)'$", "%1")
+end
+
 return M

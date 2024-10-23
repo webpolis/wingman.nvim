@@ -52,7 +52,7 @@ local function request_document(req_type, client, name, line_number, start_col, 
 						line = range.start.line,
 						end_line = range["end"].line,
 						path = ref_file_path,
-						code = code_block,
+						code = utils.escape(code_block),
 						type = req_type,
 					})
 					symbol_set[unique_key] = true -- Mark this symbol as added
@@ -106,7 +106,7 @@ local function get_symbols(callback)
 					line = start_row,
 					end_line = end_row,
 					path = file_path,
-					code = own_code_block,
+					code = utils.escape(own_code_block),
 					type = "own_reference",
 				})
 				symbol_set[own_unique_key] = true -- Mark this symbol as added
@@ -150,9 +150,9 @@ function M.check_and_update_symbol(db, symbol)
 			local existing_record = existing_records[1] -- Assuming unique records
 
 			-- Check if the code differs
-			if existing_record.code ~= symbol.code then
+			if utils.unescape(existing_record.code) ~= utils.unescape(symbol.code) then
 				-- Update the record with the new code
-				db:update_by_id("symbols", existing_record.id, { code = symbol.code })
+				db:update_by_id("symbols", existing_record.id, { code = utils.escape(symbol.code) })
 			end
 
 			return existing_record.id
@@ -188,7 +188,7 @@ function M.symbols_to_markdown(symbol_ids, symbols)
 			file_contents[symbol.path] = utils.lines_to_table(symbol.path)
 		end
 
-		local code_block = utils.split_string_by_newlines(symbol.code)
+		local code_block = utils.split_string_by_newlines(utils.unescape(symbol.code))
 
 		table.insert(ranges[symbol.path], { symbol.line, symbol.line + #code_block })
 
@@ -296,15 +296,17 @@ function M.parse(collect)
 
 			local popup = Popup({
 				bufnr = buf,
-				position = "50%",
+				-- position = "50%",
+				position = 0,
 				size = {
 					width = 120,
-					height = 60,
+					height = 45,
 				},
 				enter = true,
 				focusable = true,
 				zindex = 50,
-				relative = "editor",
+				-- relative = "editor",
+				-- relative = "win",
 				border = {
 					padding = {
 						top = 2,
