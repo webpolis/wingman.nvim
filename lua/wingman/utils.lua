@@ -345,6 +345,7 @@ function M.show_suggestions(bufnr)
 	end
 
 	-- Fetch suggestions from the symbols table
+	input = string.gsub(input, "'", " ")
 	local symbols = symbols_db:get("symbols", { contains = { name = input .. "*" }, limit = 20 })
 	local paths = symbols_db:get("symbols", { contains = { path = "*" .. input .. "*" }, limit = 20 })
 	local suggestions = {}
