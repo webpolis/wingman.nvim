@@ -261,6 +261,7 @@ function M.parse(collect)
 		end
 
 		final_output = utils.table_concat(final_output, M.symbols_to_markdown(collected_symbols_ids))
+		final_output[#final_output + 1] = "ONLY EVER RETURN CODE IN A *SEARCH/REPLACE BLOCK*!"
 
 		utils.multi_line_input(function(user_input)
 			local user_question = user_input or utils.load_user_input()
