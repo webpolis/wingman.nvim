@@ -240,7 +240,13 @@ function M.parse(collect)
 		vim.api.nvim_buf_set_option(buf, "buftype", "nofile")
 		vim.api.nvim_buf_set_option(buf, "swapfile", false)
 
-		local final_output = { "Following is a list of file paths and code snippets as context:", "" }
+		local PROJ_FILES_PROMPT =
+			[[Tell me which files in my repo are the most likely to **need changes** to solve the requests I make.
+Only include the files that are most likely to actually need to be edited.
+Don't include files that might contain relevant context, just files that will need to be changed.
+]]
+		local final_output =
+			{ "Here are summaries of some files with code snippets present in my project.", PROJ_FILES_PROMPT }
 		symbol_set = {}
 		pending_requests = 0
 
@@ -262,6 +268,7 @@ function M.parse(collect)
 
 		final_output = utils.table_concat(final_output, M.symbols_to_markdown(collected_symbols_ids))
 		final_output[#final_output + 1] = "ONLY EVER RETURN CODE IN A *SEARCH/REPLACE BLOCK*!"
+		final_output[#final_output + 1] = ""
 
 		utils.multi_line_input(function(user_input)
 			local user_question = user_input or utils.load_user_input()
