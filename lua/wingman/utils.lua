@@ -177,6 +177,11 @@ function M.get_client()
 end
 
 function M.get_code_block_from_file(file_path, start_line, end_line)
+	if not vim.fn.filereadable(file_path) then
+		print("Error: File does not exist.")
+		return nil
+	end
+
 	local code_block
 
 	-- Create a new buffer for the specified file
@@ -330,6 +335,12 @@ end
 -- Function to load user input from the temporary file
 function M.load_user_input()
 	local cache_dir = vim.fn.stdpath("cache") .. "/wingman_user_input"
+
+	if not vim.fn.filereadable(cache_dir) then
+		print("Error: User input file does not exist.")
+		return ""
+	end
+
 	local lines = vim.fn.readfile(cache_dir)
 	return table.concat(lines, "\n")
 end
