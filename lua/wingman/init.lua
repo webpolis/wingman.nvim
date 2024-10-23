@@ -1,27 +1,26 @@
 local core = require("wingman.core")
+local llm = require("wingman.llm")
 
 ---@class Config
 ---@field opt string Your config option
 local config = {
-	opt = "Hello!",
+	openai_api_key = os.getenv("OPENAI_API_KEY"),
 }
 
 ---@class MyModule
 local M = {}
 
 ---@type Config
-M._config = config
+M.config = config
 
 ---@param args Config?
--- you can define your setup function here. Usually configurations can be merged, accepting outside params and
--- you can also put some validation here for those.
 M.setup = function(args)
-	M.config = vim.tbl_deep_extend("force", M._config, args or {})
+	M.config = vim.tbl_deep_extend("force", M.config, args or {})
 end
 
-M.config = M.setup
-
 M.start = function()
+	llm.init_client(M.config)
+
 	return core.parse()
 end
 
