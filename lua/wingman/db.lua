@@ -63,9 +63,7 @@ function SQLiteWrapper:remove_by_path(table_name, path)
 end
 
 function SQLiteWrapper:cleanup()
-	vim.defer_fn(function()
-		vim.loop.fs_unlink(self.uri)
-	end, 40000)
+	vim.loop.fs_unlink(self.uri)
 end
 
 return {

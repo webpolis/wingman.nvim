@@ -114,8 +114,7 @@ local function get_symbols(callback)
 				symbol_set[own_unique_key] = true -- Mark this symbol as added
 
 				-- Increment pending requests counter
-				pending_requests = pending_requests + 1
-
+				pending_requests = pending_requests
 				request_document("definition", client, name, start_row, start_col, symbols, callback)
 				-- request_document("references", client, name, line_number, start_col, symbols, callback)
 			end
@@ -306,17 +305,16 @@ Don't include files that might contain relevant context, just files that will ne
 
 			local popup = Popup({
 				bufnr = buf,
-				-- position = "50%",
-				position = 0,
+				position = "100%",
+				anchor = "SW",
 				size = {
-					width = 120,
+					width = 80,
 					height = 45,
 				},
 				enter = true,
 				focusable = true,
 				zindex = 50,
 				relative = "editor",
-				-- relative = "win",
 				border = {
 					padding = {
 						top = 2,

@@ -261,10 +261,11 @@ end
 
 function M.multi_line_input(callback)
 	local popup = Popup({
-		position = "50%",
+		position = "100%",
+		anchor = "SW",
 		size = {
 			width = 80,
-			height = 40,
+			height = 45,
 		},
 		enter = true,
 		focusable = true,
