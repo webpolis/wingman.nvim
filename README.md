@@ -88,7 +88,7 @@ When the initial prompt dialog opens, Wingman automatically gathers all symbols 
 
 To ensure symbols are extracted, your editor's LSP must be correctly configured. Use `LspInfo` to verify that the current language is supported by an LSP server. Otherwise, the entire contents of the buffer will be included.
 
-| Option           | Description                                                                       |
+| Command           | Description                                                                       |
 | ---------------- | --------------------------------------------------------------------------------- |
 | `Wingman`        | Opens the prompt dialog                                                           |
 | `WingmanCollect` | Adds the current buffer's content to the Wingman context without opening a dialog |
