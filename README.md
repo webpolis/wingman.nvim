@@ -2,6 +2,8 @@
 
 Welcome to **Wingman**, the ultimate plugin that supercharges your Neovim experience by integrating a powerful LLM (Large Language Model) directly into your coding workflow! Imagine having an intelligent assistant that understands your project context and helps you write better code, all while you focus on what you do best—creating amazing software!
 
+![intro](https://s11.gifyu.com/images/SOQ75.gif)
+
 ## Why Wingman?
 
 In today's fast-paced development environment, efficiency is key. Wingman takes your coding to the next level by automatically injecting relevant project context into requests sent to the LLM. This means you get smarter, more contextual responses tailored to your specific needs, making your coding sessions more productive and enjoyable.
