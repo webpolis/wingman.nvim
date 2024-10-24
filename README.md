@@ -25,7 +25,7 @@ To get started with Wingman, simply install the plugin using your favorite packa
 
 ### Installation with LazyVim
 
-1. Add the following to your `lazyvim` configuration:
+1. Add the following to `~/.config/nvim/lua/plugins/wingman.lua` configuration:
 
 ```lua
 return {
