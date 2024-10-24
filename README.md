@@ -8,11 +8,12 @@ In today's fast-paced development environment, efficiency is key. Wingman takes 
 
 ### Key Features
 
-- **Context-Aware Requests**: Wingman automatically gathers and includes project context in your requests, ensuring that the LLM understands exactly what you're working on.
-- **Seamless Integration**: Designed specifically for Neovim, Wingman fits effortlessly into your existing workflow, enhancing your coding experience without any hassle.
-- **User-Friendly Interface**: With a clean and intuitive interface, interacting with the LLM is as easy as pressing a few keys. You'll be amazed at how quickly you can get the help you need!
-- **Code Replacement (WIP)**: Wingman aims to automatically replace affected lines of code based on the LLM's suggestions, allowing you to implement improvements with just a few keystrokes.
-- **Extend models / providers support (WIP)**: Currently, Wingman only supports OpenAI's models but new models and providers will be added very soon. Feel free to contribute.
+- **Context-Aware Requests**: Wingman automatically collects and incorporates project context into your requests, ensuring the LLM fully understands your current work.
+- **Seamless Integration**: Specifically designed for Neovim, Wingman integrates smoothly into your existing workflow, enhancing your coding experience without any hassle.
+- **User-Friendly Interface**: Featuring a clean and intuitive interface, interacting with the LLM is as simple as pressing a few keys. You'll be amazed at how quickly you can get the assistance you need!
+- **Code Replacement (WIP)**: Wingman aims to automatically update affected lines of code based on the LLM's suggestions, enabling you to implement improvements with just a few keystrokes.
+- **Extend Models / Providers Support (WIP)**: Currently, Wingman supports only OpenAI's models, but new models and providers will be added soon. Contributions are welcome.
+- **Persist Chat Sessions (WIP)**: Currently, each time you open the prompt dialog, the conversation's scope is limited to the current buffer context. There are plans to optionally allow session persistence across different dialogs.
 
 ## Getting Started
 
@@ -85,11 +86,11 @@ When the initial prompt dialog opens, Wingman automatically gathers all symbols 
 
 To ensure symbols are extracted, your editor's LSP must be correctly configured. Use `LspInfo` to verify that the current language is supported by an LSP server. Otherwise, the entire contents of the buffer will be included.
 
-| Option           | Description                                                 |
-| ---------------- | ----------------------------------------------------------- |
-| `Wingman`        | Opens the prompt dialog                                     |
-| `WingmanCollect` | Appends the current buffer's content to the Wingman context |
-| `WingmanClear`   | Resets the cache and database                               |
+| Option           | Description                                                                       |
+| ---------------- | --------------------------------------------------------------------------------- |
+| `Wingman`        | Opens the prompt dialog                                                           |
+| `WingmanCollect` | Adds the current buffer's content to the Wingman context without opening a dialog |
+| `WingmanClear`   | Clears the cache and resets the database                                          |
 
 ### Contribute
 
