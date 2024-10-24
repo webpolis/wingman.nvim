@@ -26,6 +26,7 @@ M.start = function()
 end
 
 M.collect = function()
+  print("New context added!")
 	return core.parse(true)
 end
 

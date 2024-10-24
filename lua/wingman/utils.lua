@@ -265,7 +265,7 @@ function M.multi_line_input(callback)
 		anchor = "SW",
 		size = {
 			width = 80,
-			height = 45,
+			height = "80%",
 		},
 		enter = true,
 		focusable = true,

@@ -320,7 +320,7 @@ Don't include files that might contain relevant context, just files that will ne
 				anchor = "SW",
 				size = {
 					width = 80,
-					height = 45,
+					height = "80%",
 				},
 				enter = true,
 				focusable = true,
