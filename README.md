@@ -97,7 +97,3 @@ To ensure symbols are extracted, your editor's LSP must be correctly configured.
 ### Contribute
 
 As Wingman is still a work in progress, your feedback and contributions are invaluable! Join our community, report issues, and help us shape the future of this plugin.
-
-```
-
-```
