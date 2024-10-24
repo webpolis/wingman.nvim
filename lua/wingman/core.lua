@@ -74,6 +74,7 @@ end
 local function get_symbols(callback)
 	local bufnr = api.nvim_get_current_buf()
 	local parser = vim.treesitter.get_parser(bufnr)
+	local file_path = api.nvim_buf_get_name(bufnr)
 	local tree = parser:parse()[1]
 	local root = tree:root()
 	local client = utils.get_client()
@@ -81,7 +82,18 @@ local function get_symbols(callback)
 
 	if not client then
 		print("No LSP clients attached")
-		return
+		local file_content = utils.lines_to_table(file_path)
+
+		table.insert(symbols, {
+			name = utils.get_relative_path(file_path),
+			line = 0,
+			end_line = #file_content,
+			path = file_path,
+			code = utils.escape(table.concat(file_content, "\n")),
+			type = "full_contents",
+		})
+
+		return callback(symbols)
 	end
 
 	-- Function to recursively collect symbols
@@ -94,7 +106,6 @@ local function get_symbols(callback)
 				return
 			end
 
-			local file_path = api.nvim_buf_get_name(bufnr)
 			local own_code_block = utils.get_code_block_from_file(file_path, start_row, end_row)
 			local own_unique_key = string.format("%s:%d:%s", name, start_row, file_path)
 
