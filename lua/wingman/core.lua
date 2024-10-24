@@ -97,6 +97,8 @@ local function get_symbols(callback)
 			local file_path = api.nvim_buf_get_name(bufnr)
 			local own_code_block = utils.get_code_block_from_file(file_path, start_row, end_row)
 			local own_unique_key = string.format("%s:%d:%s", name, start_row, file_path)
+
+			symbols_db:remove_by_path("symbols", file_path)
 			-- print(own_unique_key .. " " .. level)
 
 			-- Check for duplicates before inserting
@@ -138,7 +140,7 @@ function M.check_and_update_symbol(db, symbol)
 	local condition = {
 		path = symbol.path,
 		name = symbol.name,
-		line = symbol.line,
+		-- line = symbol.line,
 	}
 
 	-- Check if the record exists
@@ -149,11 +151,8 @@ function M.check_and_update_symbol(db, symbol)
 		if #existing_records > 0 then
 			local existing_record = existing_records[1] -- Assuming unique records
 
-			-- Check if the code differs
-			if utils.unescape(existing_record.code) ~= utils.unescape(symbol.code) then
-				-- Update the record with the new code
-				db:update_by_id("symbols", existing_record.id, { code = utils.escape(symbol.code) })
-			end
+			-- Update the record with the new code
+			db:update_by_id("symbols", existing_record.id, { code = utils.escape(symbol.code) })
 
 			return existing_record.id
 		end
@@ -266,10 +265,6 @@ Don't include files that might contain relevant context, just files that will ne
 			return
 		end
 
-		final_output = utils.table_concat(final_output, M.symbols_to_markdown(collected_symbols_ids))
-		final_output[#final_output + 1] = "ONLY EVER RETURN CODE IN A *SEARCH/REPLACE BLOCK*!"
-		final_output[#final_output + 1] = ""
-
 		utils.multi_line_input(function(user_input)
 			local user_question = user_input or utils.load_user_input()
 			local q = utils.split_string_by_newlines(user_question)
@@ -282,10 +277,17 @@ Don't include files that might contain relevant context, just files that will ne
 					local ref_symbols_by_name = symbols_db:get("symbols", { contains = { name = link["text"] } })
 					local ref_symbols_by_path = symbols_db:get("symbols", { contains = { path = "*" .. link["url"] } })
 					local ref_symbols = utils.table_concat(ref_symbols_by_name, ref_symbols_by_path)
-					local additional_context = M.symbols_to_markdown(nil, ref_symbols)
-					final_output = utils.table_concat(final_output, additional_context)
+					-- local additional_context = M.symbols_to_markdown(nil, ref_symbols)
+					-- final_output = utils.table_concat(final_output, additional_context)
+					for _, symbol in ipairs(ref_symbols) do
+						collected_symbols_ids[#collected_symbols_ids + 1] = symbol["id"]
+					end
 				end
 			end
+
+			final_output = utils.table_concat(final_output, M.symbols_to_markdown(collected_symbols_ids))
+			final_output[#final_output + 1] = "ONLY EVER RETURN CODE IN A *SEARCH/REPLACE BLOCK*!"
+			final_output[#final_output + 1] = ""
 
 			for _, qline in ipairs(q) do
 				table.insert(final_output, qline)
@@ -313,7 +315,7 @@ Don't include files that might contain relevant context, just files that will ne
 				enter = true,
 				focusable = true,
 				zindex = 50,
-				-- relative = "editor",
+				relative = "editor",
 				-- relative = "win",
 				border = {
 					padding = {

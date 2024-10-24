@@ -1,5 +1,6 @@
 local core = require("wingman.core")
 local llm = require("wingman.llm")
+local db_instance = require("wingman.db")
 
 ---@class Config
 ---@field opt string Your config option
@@ -26,6 +27,15 @@ end
 
 M.collect = function()
 	return core.parse(true)
+end
+
+M.reset = function()
+	local symbols_db_path = vim.fn.stdpath("cache") .. "/wingman_symbols.db"
+	local symbols_db = db_instance.get_instance(symbols_db_path)
+
+	symbols_db:cleanup()
+
+  print("Wingman has been cleaned up!")
 end
 
 return M

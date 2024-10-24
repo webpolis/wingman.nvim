@@ -7,6 +7,7 @@ SQLiteWrapper.__index = SQLiteWrapper
 local instance = nil
 
 function SQLiteWrapper:new(uri)
+	self.uri = uri
 	if not instance then
 		instance = setmetatable({ db = sqlite({ uri = uri, opts = {} }) }, self)
 	end
@@ -54,6 +55,11 @@ end
 function SQLiteWrapper:remove_by_id(table_name, id)
 	self:check_table_exists(table_name)
 	self.db[table_name]:remove({ id = id })
+end
+
+function SQLiteWrapper:remove_by_path(table_name, path)
+	self:check_table_exists(table_name)
+	self.db[table_name]:remove({ path = path })
 end
 
 function SQLiteWrapper:cleanup()
