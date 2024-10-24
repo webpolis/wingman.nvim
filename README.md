@@ -81,7 +81,7 @@ luarocks install lua-openai
 ### Usage
 
 1. Open a file in Neovim.
-2. Run the `Wingman` command.
+2. Run the `:Wingman` command.
 3. Ask questions or request code suggestions, and watch as Wingman enhances your coding experience!
 
 When the initial prompt dialog opens, Wingman automatically gathers all symbols present in the current buffer. As you type, suggestions will appear as markdown links (e.g. _\[MySymbol\]\(src/symbols.ts\)_). Once a suggestion is selected, it will be included in the current prompt's context.
