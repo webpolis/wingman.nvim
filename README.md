@@ -21,8 +21,6 @@ In today's fast-paced development environment, efficiency is key. Wingman takes 
 
 To get started with Wingman, simply install the plugin using your favorite package manager. Once installed, you can begin leveraging the power of LLMs in your coding routine.
 
-To get started with Wingman, simply install the plugin using your favorite package manager. Once installed, you can begin leveraging the power of LLMs in your coding routine.
-
 ### Installation with LazyVim
 
 1. Add the following to `~/.config/nvim/lua/plugins/wingman.lua` configuration:
