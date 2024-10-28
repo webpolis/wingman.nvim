@@ -229,6 +229,8 @@ function M.symbols_to_markdown(symbol_ids, symbols)
 end
 
 function M.parse(collect)
+	symbol_set = {}
+	pending_requests = 0
 	local symbols_schema = {
 		id = true, -- Unique identifier for each symbol
 		name = { "text", required = true }, -- Name of the symbol
@@ -248,6 +250,9 @@ function M.parse(collect)
 		-- Set buffer options
 		vim.api.nvim_buf_set_option(buf, "buftype", "nofile")
 		vim.api.nvim_buf_set_option(buf, "swapfile", false)
+		-- Set the buffer to be hidden
+		vim.api.nvim_buf_set_option(buf, "buflisted", false) -- Prevent the buffer from being listed
+		vim.api.nvim_buf_set_option(buf, "bufhidden", "wipe") -- Automatically delete when hidden
 
 		local PROJ_FILES_PROMPT =
 			[[Tell me which files in my repo are the most likely to **need changes** to solve the requests I make.
