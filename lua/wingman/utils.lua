@@ -302,7 +302,9 @@ function M.multi_line_input(callback)
 	vim.api.nvim_buf_set_option(popup.bufnr, "modifiable", true)
 	vim.api.nvim_win_set_option(popup.winid, "wrap", true)
 
-	vim.cmd("startinsert")
+	vim.defer_fn(function()
+		vim.cmd("startinsert")
+	end, 500)
 
 	popup:map("n", "<esc>", function()
 		popup:hide()
@@ -322,8 +324,6 @@ function M.multi_line_input(callback)
 		popup:hide()
 		popup:unmount()
 	end, { noremap = true })
-
-	local menu
 
 	vim.api.nvim_create_autocmd({ "TextChangedI" }, {
 		buffer = popup.bufnr, -- Target the specific buffer
