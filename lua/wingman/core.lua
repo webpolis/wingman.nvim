@@ -71,16 +71,20 @@ local function request_document(req_type, client, name, line_number, start_col, 
 	end)
 end
 
+local function get_parser(bufnr)
+	local parser = vim.treesitter.get_parser(bufnr)
+
+	return parser
+end
+
 local function get_symbols(callback)
 	local bufnr = api.nvim_get_current_buf()
-	local parser = vim.treesitter.get_parser(bufnr)
 	local file_path = api.nvim_buf_get_name(bufnr)
-	local tree = parser:parse()[1]
-	local root = tree:root()
 	local client = utils.get_client()
 	local symbols = {}
+	local status, parser = pcall(get_parser, bufnr)
 
-	if not client then
+	if not status or not client then
 		print("No LSP clients attached")
 		local file_content = utils.lines_to_table(file_path)
 
@@ -95,6 +99,9 @@ local function get_symbols(callback)
 
 		return callback(symbols)
 	end
+
+	local tree = parser:parse()[1]
+	local root = tree:root()
 
 	-- Function to recursively collect symbols
 	local function collect_symbols(node, level)
