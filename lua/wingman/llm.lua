@@ -141,7 +141,7 @@ Always provide a summary of the proposed changes. Briefly describe your proposed
 
 function M.init_client(config)
 	client = openai.new(config.openai_api_key)
-	M.model = config.model or "gpt-4o-mini"
+	M.model = config.openai_model or "gpt-4o-mini"
 end
 
 function M.send_to_openai(final_output, popup)
