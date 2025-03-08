@@ -3,6 +3,18 @@ local client = nil
 local utils = require("wingman.utils")
 
 local M = {}
+function M.processAccumulatedContent(accumulated, popup)
+	while true do
+		local newline_pos = string.find(accumulated, "\n")
+		if not newline_pos then
+			return accumulated
+		end
+		local paragraph = string.sub(accumulated, 1, newline_pos - 1)
+		vim.api.nvim_buf_set_lines(popup.bufnr, -1, -1, false, { paragraph })
+		vim.cmd("redraw")
+		accumulated = string.sub(accumulated, newline_pos + 1)
+	end
+end
 M.model = nil
 M.SYSTEM_PROMPT =
 	[[You are a Senior Engineer with extensive experience in both backend and frontend development across various programming languages and frameworks, including React, Angular, Vue.js, Svelte, Node.js, Python, Java, C++, and Go. You excel in designing RESTful APIs and GraphQL services, and have expertise in blockchain and web3 development.
@@ -140,6 +152,9 @@ Always provide a summary of the proposed changes. Briefly describe your proposed
 ]]
 
 function M.init_client(config)
+	if not config.openai_api_key then
+		error("OpenAI API key is required")
+	end
 	client = openai.new(config.openai_api_key)
 	M.model = config.openai_model or "gpt-4o-mini"
 end
@@ -160,8 +175,15 @@ function M.send_to_openai(final_output, popup)
 	end
 
 	local accumulated_content = ""
+	local payload = { stream = true, model = M.model }
+	if M.model:sub(1, 1) == "o" then
+		payload.response_format = { type = "text" }
+		payload.reasoning_effort = "medium"
+	else
+		payload.temperature = 0.15
+	end
 
-	client:chat(messages, { stream = true, model = M.model, temperature = 0.15 }, function(chunk)
+	client:chat(messages, payload, function(chunk)
 		if not popup_is_open then
 			popup:show()
 			popup_is_open = true
@@ -171,30 +193,12 @@ function M.send_to_openai(final_output, popup)
 		if chunk.content and chunk.content ~= "" then
 			-- Accumulate content
 			accumulated_content = accumulated_content .. chunk.content
-
-			-- Check for newlines to determine if we have a complete paragraph
-			while true do
-				local newline_pos = string.find(accumulated_content, "\n")
-				if newline_pos ~= nil then
-					-- vim.api.nvim_buf_set_lines(popup.bufnr, -1, -1, false, { "" })
-					-- vim.cmd("redraw")
-				else
-					break -- No more newlines found
-				end
-
-				-- Extract the paragraph up to the newline
-				local paragraph = string.sub(accumulated_content, 1, newline_pos - 1)
-				vim.api.nvim_buf_set_lines(popup.bufnr, -1, -1, false, { paragraph })
-				vim.cmd("redraw")
-				extra_line_count = extra_line_count + 1
-
-				-- Remove the processed paragraph from accumulated_content
-				accumulated_content = string.sub(accumulated_content, newline_pos + 1)
-			end
-
+			accumulated_content = M.processAccumulatedContent(accumulated_content, popup)
 			-- Move the cursor to the end of the buffer
 			local current_line_count = vim.api.nvim_buf_line_count(popup.bufnr)
 			vim.api.nvim_win_set_cursor(popup.winid, { current_line_count, 0 })
+		elseif chunk.error then
+			vim.notify("Chat error: " .. tostring(chunk.error), vim.log.levels.ERROR)
 		end
 	end)
 end
