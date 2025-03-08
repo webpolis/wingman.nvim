@@ -108,18 +108,26 @@ function M.highlight_buffer(bufnr, start_line, end_line)
 	end
 end
 
-function M.print_summary(tbl)
+function M.print_summary(tbl, indent)
 	if type(tbl) ~= "table" then
 		print("Provided argument is not a table.")
 		return
 	end
 
-	print("Summary of table:")
+	-- Set default indent level if not provided
+	indent = indent or 0
+
+	-- Create an indentation string
+	local indent_str = string.rep("  ", indent)
+
+	print(indent_str .. "Summary of table:")
 	for key, value in pairs(tbl) do
 		if type(value) == "table" then
-			print(string.format("  %s: table (contains %d keys)", key, #value))
+			print(string.format("%s  %s: table", indent_str, key))
+			-- Recursively call print_summary for the nested table
+			M.print_summary(value, indent + 1)
 		else
-			print(string.format("  %s: %s", key, value))
+			print(string.format("%s  %s: %s", indent_str, key, value))
 		end
 	end
 end
